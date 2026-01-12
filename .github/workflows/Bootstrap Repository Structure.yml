@@ -82,11 +82,6 @@ EOF
 cat > "$ROOT/README.md" << 'EOF'
 # Microservices Consistency Java (Saga, Outbox, Idempotência, Exactly-once)
 
-[Guia completo no arquivo README-BOOTSTRAP.md, e docs/]
-
-## Como executar (exemplos)
-Cada pasta é um projeto Maven. Ajuste `application.yml` conforme seu ambiente (Kafka, DB).
-
 ```bash
 cd outbox
 mvn spring-boot:run
