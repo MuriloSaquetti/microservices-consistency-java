@@ -52,7 +52,7 @@ public class OutboxEvent { @Id @GeneratedValue private Long id; private String a
   @Column(columnDefinition = "TEXT") private String payloadJson; private Instant createdAt; /*get/set*/ }
 
 // **Transação única:**
-```java
+
 @Service
 public class OrderService {
   @Transactional
@@ -69,7 +69,7 @@ public class OrderService {
 }
 
 // **Dispatcher (publica e confirma)**
-```java
+
 @Component
 public class OutboxDispatcher {
   @Scheduled(fixedDelay = 1000)
@@ -81,13 +81,13 @@ public class OutboxDispatcher {
     }
   }
 }
-
+```md
 ---
 
 ### 3.2) Saga (orquestração com compensações)
 **Problema:** 2PC é bloqueante; falhas intermediárias geram estado parcial.
 **Solução:** Sagas coordenam transações locais e executam compensações em caso de falha.
-
+```java
 @Service
 public class CreateOrderSaga {
   public void execute(String customerId, String sku) {
@@ -104,13 +104,13 @@ public class CreateOrderSaga {
     }
   }
 }
-
+```md
 ---
 
 ### 3.3) Idempotency-Key em APIs (Idempotency‑Key)
 **Problema:** retries em POST podem criar duplicidades (cobrança/ordem em dobro).
 **Solução:** Idempotency‑Key — múltiplas tentativas retornam o mesmo resultado.
-
+```java
 @RestController
 @RequestMapping("/payments")
 public class PaymentController {
@@ -125,11 +125,11 @@ public class PaymentController {
     return ResponseEntity.status(result.httpStatus()).body(result.body());
   }
 }
-
+```md
 ---
 
 ### 3.4) Kafka “exactly‑once” (produtor transacional)
-
+```java
 Properties p = new Properties();
 p.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
 p.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
@@ -147,11 +147,11 @@ try (KafkaProducer<String,String> prod = new KafkaProducer<>(p, new StringSerial
     prod.commitTransaction();
   } catch (Exception e) { prod.abortTransaction(); throw e; }
 }
-
+```md
 ---
 
 ### 3.5) Resiliência operacional (Resilience4j)
-
+```java
 RetryConfig rc = RetryConfig.custom()
   .maxAttempts(5).waitDuration(Duration.ofMillis(200))
   .intervalFunction(IntervalFunction.ofExponentialBackoff(200, 2.0, 0.5)) // jitter 50%
@@ -166,9 +166,10 @@ Supplier<Response> s = CircuitBreaker.decorateSupplier(cb, () -> paymentClient.c
 s = Retry.decorateSupplier(retry, s);
 Response r = Try.ofSupplier(s).recover(ex -> Response.failed(ex.getMessage())).get();
 ``
+```md
 ---
 
 ### 5) Infra local com Docker Compose
-
+```java
 docker compose up -d
 # Kafka em localhost:9092, Zookeeper em localhost:2181, Redis em localhost:6379
