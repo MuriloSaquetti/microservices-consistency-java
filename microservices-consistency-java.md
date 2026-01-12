@@ -36,9 +36,9 @@ Ao migrar de um monólito para microservices, perdemos a “transação única�
 
 ---
 
-## 4) Trechos-chave de código (Java)
+## 3) Trechos-chave de código (Java)
 
-### 4.1 Transactional Outbox (Spring Boot + JPA + Kafka)
+### 3.1) Transactional Outbox (Spring Boot + JPA + Kafka)
 **Problema:** evitar inconsistência entre “salvar no banco” e “publicar evento”.  
 **Solução:** salvar **entidade** e **evento (outbox)** na **mesma transação**; um **dispatcher** publica depois no Kafka.
 
@@ -51,7 +51,8 @@ public class Order { @Id @GeneratedValue private Long id; private String custome
 public class OutboxEvent { @Id @GeneratedValue private Long id; private String aggregateType, aggregateId, type;
   @Column(columnDefinition = "TEXT") private String payloadJson; private Instant createdAt; /*get/set*/ }
 
-**Transação única:*
+// **Transação única:**
+```java
 @Service
 public class OrderService {
   @Transactional
@@ -67,7 +68,8 @@ public class OrderService {
   }
 }
 
-**Dispatcher (publica e confirma)**
+// **Dispatcher (publica e confirma)**
+```java
 @Component
 public class OutboxDispatcher {
   @Scheduled(fixedDelay = 1000)
@@ -80,7 +82,12 @@ public class OutboxDispatcher {
   }
 }
 
-**4.2 Saga (orquestração com compensações)**
+---
+
+### 3.2) Saga (orquestração com compensações)
+**Problema:** 2PC é bloqueante; falhas intermediárias geram estado parcial.
+**Solução:** Sagas coordenam transações locais e executam compensações em caso de falha.
+
 @Service
 public class CreateOrderSaga {
   public void execute(String customerId, String sku) {
@@ -98,7 +105,12 @@ public class CreateOrderSaga {
   }
 }
 
-**4.3 Idempotency-Key em APIs (Idempotency‑Key)**
+---
+
+### 3.3) Idempotency-Key em APIs (Idempotency‑Key)
+**Problema:** retries em POST podem criar duplicidades (cobrança/ordem em dobro).
+**Solução:** Idempotency‑Key — múltiplas tentativas retornam o mesmo resultado.
+
 @RestController
 @RequestMapping("/payments")
 public class PaymentController {
@@ -114,7 +126,10 @@ public class PaymentController {
   }
 }
 
-**4.4 Kafka “exactly‑once” (produtor transacional)**
+---
+
+### 3.4) Kafka “exactly‑once” (produtor transacional)
+
 Properties p = new Properties();
 p.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
 p.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
@@ -133,7 +148,10 @@ try (KafkaProducer<String,String> prod = new KafkaProducer<>(p, new StringSerial
   } catch (Exception e) { prod.abortTransaction(); throw e; }
 }
 
-**4.5 Resiliência operacional (Resilience4j)**
+---
+
+### 3.5) Resiliência operacional (Resilience4j)
+
 RetryConfig rc = RetryConfig.custom()
   .maxAttempts(5).waitDuration(Duration.ofMillis(200))
   .intervalFunction(IntervalFunction.ofExponentialBackoff(200, 2.0, 0.5)) // jitter 50%
@@ -148,8 +166,9 @@ Supplier<Response> s = CircuitBreaker.decorateSupplier(cb, () -> paymentClient.c
 s = Retry.decorateSupplier(retry, s);
 Response r = Try.ofSupplier(s).recover(ex -> Response.failed(ex.getMessage())).get();
 ``
+---
 
-**5) Infra local com Docker Compose**
+### 5) Infra local com Docker Compose
 
 docker compose up -d
 # Kafka em localhost:9092, Zookeeper em localhost:2181, Redis em localhost:6379
