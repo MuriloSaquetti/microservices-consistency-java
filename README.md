@@ -8,7 +8,6 @@ Este repositório demonstra, em **Java (Spring Boot/Kafka)**, padrões essenciai
 - **Produtor Kafka transacional** (base para *exactly-once*).
 - **Resilience4j** (timeouts, retry com **exponential backoff + jitter**, circuit breaker).
 - **Infra local** com Docker Compose (**Kafka + Zookeeper + Redis**).
-- **CI (GitHub Actions)** para build dos módulos.
 
 ## 1) Problema complexo: Consistência de dados em microservices
 
@@ -82,8 +81,6 @@ public class OutboxDispatcher {
   }
 }
 ```
----
-
 ### 3.2) Saga (orquestração com compensações)
 **Problema:** 2PC é bloqueante; falhas intermediárias geram estado parcial.
 **Solução:** Sagas coordenam transações locais e **executam compensações em caso de falha.**
@@ -105,8 +102,6 @@ public class CreateOrderSaga {
   }
 }
 ```
----
-
 ### 3.3) Idempotency-Key em APIs (Idempotency‑Key)
 **Problema:** retries em POST podem criar duplicidades (cobrança/ordem em dobro).
 **Solução:** Idempotency‑Key — múltiplas tentativas retornam o **mesmo resultado.**
@@ -126,8 +121,6 @@ public class PaymentController {
   }
 }
 ```
----
-
 ### 3.4) Kafka “exactly‑once” (produtor transacional)
 ```java
 Properties p = new Properties();
@@ -148,8 +141,6 @@ try (KafkaProducer<String,String> prod = new KafkaProducer<>(p, new StringSerial
   } catch (Exception e) { prod.abortTransaction(); throw e; }
 }
 ```
----
-
 ### 3.5) Resiliência operacional (Resilience4j)
 ```java
 RetryConfig rc = RetryConfig.custom()
@@ -168,7 +159,7 @@ Response r = Try.ofSupplier(s).recover(ex -> Response.failed(ex.getMessage())).g
 ```
 ---
 
-### 5) Infra local com Docker Compose
+## 4) Infra local com Docker Compose
 ```java
 docker compose up -d
 # Kafka em localhost:9092, Zookeeper em localhost:2181, Redis em localhost:6379
