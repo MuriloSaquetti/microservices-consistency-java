@@ -50,9 +50,9 @@ public class Order { @Id @GeneratedValue private Long id; private String custome
 @Entity @Table(name = "outbox_events")
 public class OutboxEvent { @Id @GeneratedValue private Long id; private String aggregateType, aggregateId, type;
   @Column(columnDefinition = "TEXT") private String payloadJson; private Instant createdAt; /*get/set*/ }
-
-// **Transação única:**
-
+```
+**Transação única:**
+```java
 @Service
 public class OrderService {
   @Transactional
@@ -67,9 +67,9 @@ public class OrderService {
     return order;
   }
 }
-
-// **Dispatcher (publica e confirma)**
-
+```
+**Dispatcher (publica e confirma)**
+```java
 @Component
 public class OutboxDispatcher {
   @Scheduled(fixedDelay = 1000)
@@ -81,12 +81,12 @@ public class OutboxDispatcher {
     }
   }
 }
-```md
+```
 ---
 
 ### 3.2) Saga (orquestração com compensações)
 **Problema:** 2PC é bloqueante; falhas intermediárias geram estado parcial.
-**Solução:** Sagas coordenam transações locais e executam compensações em caso de falha.
+**Solução:** Sagas coordenam transações locais e **executam compensações em caso de falha.**
 ```java
 @Service
 public class CreateOrderSaga {
@@ -104,12 +104,12 @@ public class CreateOrderSaga {
     }
   }
 }
-```md
+```
 ---
 
 ### 3.3) Idempotency-Key em APIs (Idempotency‑Key)
 **Problema:** retries em POST podem criar duplicidades (cobrança/ordem em dobro).
-**Solução:** Idempotency‑Key — múltiplas tentativas retornam o mesmo resultado.
+**Solução:** Idempotency‑Key — múltiplas tentativas retornam o **mesmo resultado.**
 ```java
 @RestController
 @RequestMapping("/payments")
@@ -125,7 +125,7 @@ public class PaymentController {
     return ResponseEntity.status(result.httpStatus()).body(result.body());
   }
 }
-```md
+```
 ---
 
 ### 3.4) Kafka “exactly‑once” (produtor transacional)
@@ -147,7 +147,7 @@ try (KafkaProducer<String,String> prod = new KafkaProducer<>(p, new StringSerial
     prod.commitTransaction();
   } catch (Exception e) { prod.abortTransaction(); throw e; }
 }
-```md
+```
 ---
 
 ### 3.5) Resiliência operacional (Resilience4j)
@@ -165,8 +165,7 @@ CircuitBreaker cb = CircuitBreaker.of("payment-cb", cbc);
 Supplier<Response> s = CircuitBreaker.decorateSupplier(cb, () -> paymentClient.call());
 s = Retry.decorateSupplier(retry, s);
 Response r = Try.ofSupplier(s).recover(ex -> Response.failed(ex.getMessage())).get();
-``
-```md
+```
 ---
 
 ### 5) Infra local com Docker Compose
